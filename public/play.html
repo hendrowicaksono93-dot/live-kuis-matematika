@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Jawab Soal - SPENFORTY</title>
+  <link rel="icon" href="https://smpnegeri40suroboyo.wordpress.com/wp-content/uploads/2020/06/cropped-cilik-web.png" type="image/png">
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Ganti Socket.io dengan Pusher CDN -->
+  <!-- Pusher CDN -->
   <script src="https://js.pusher.com/8.0/pusher.min.js"></script>
   <style>
-    /* Mencegah zoom di HP saat tap cepat */
     body { touch-action: manipulation; }
     .disabled-numpad { opacity: 0.4; pointer-events: none; }
   </style>
@@ -61,7 +61,6 @@
       <button onclick="pressNum('0')" class="bg-slate-700 active:bg-slate-600 py-4 text-2xl font-bold rounded-xl shadow-md">0</button>
       <button onclick="clearNum()" class="bg-amber-500 active:bg-amber-600 text-slate-900 py-4 text-2xl font-black rounded-xl shadow-md">C</button>
       
-      <!-- Tombol Kirim Penuh -->
       <button onclick="sendAnswer()" class="col-span-3 bg-green-500 active:bg-green-600 py-4 text-xl font-black rounded-xl shadow-lg mt-2 tracking-wide uppercase">
         KIRIM JAWABAN
       </button>
@@ -71,7 +70,6 @@
   </div>
 
   <script>
-    // Inisialisasi Pusher
     const pusher = new Pusher('a36b831383bbba2fdf2f', {
       cluster: 'ap1'
     });
@@ -102,7 +100,6 @@
         return alert(response.error);
       }
 
-      // Subscribe ke channel room Pusher
       channel = pusher.subscribe(`room-${currentRoom}`);
 
       channel.bind('new_question', (data) => {
