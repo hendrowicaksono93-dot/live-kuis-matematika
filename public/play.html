@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Jawab Soal - SPENFORTY</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="/socket.io/socket.io.js"></script>
+  <!-- Ganti Socket.io dengan Pusher CDN -->
+  <script src="https://js.pusher.com/8.0/pusher.min.js"></script>
   <style>
     /* Mencegah zoom di HP saat tap cepat */
     body { touch-action: manipulation; }
@@ -70,25 +71,52 @@
   </div>
 
   <script>
-    const socket = io();
+    // Inisialisasi Pusher
+    const pusher = new Pusher('a36b831383bbba2fdf2f', {
+      cluster: 'ap1'
+    });
+
+    const userId = "player-" + Math.floor(Math.random() * 100000);
     let currentRoom = "";
     let currentAnswer = "";
+    let channel = null;
 
-    function joinGame() {
+    async function apiCall(action, payload = {}) {
+      const res = await fetch('/api', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, roomId: currentRoom, userId, ...payload })
+      });
+      return res.json();
+    }
+
+    async function joinGame() {
       const username = document.getElementById('usernameInput').value;
       const room = document.getElementById('roomInput').value.toUpperCase();
       if (!username || !room) return alert("Isi nama dan kode room!");
 
       currentRoom = room;
-      socket.emit('join_room', { roomId: room, username });
-    }
 
-    socket.on('joined_successfully', (data) => {
+      const response = await apiCall('join_room', { username });
+      if (response.error) {
+        return alert(response.error);
+      }
+
+      // Subscribe ke channel room Pusher
+      channel = pusher.subscribe(`room-${currentRoom}`);
+
+      channel.bind('new_question', (data) => {
+        document.getElementById('questionText').innerText = data.questionText;
+        currentAnswer = "";
+        updateDisplay();
+        
+        document.getElementById('numpadArea').classList.remove('disabled-numpad');
+        document.getElementById('statusMsg').innerText = '';
+      });
+
       document.getElementById('joinSection').classList.add('hidden');
       document.getElementById('gameSection').classList.remove('hidden');
-    });
-
-    socket.on('join_error', (msg) => alert(msg));
+    }
 
     function pressNum(num) {
       if (currentAnswer.length < 5) {
@@ -111,18 +139,10 @@
       document.getElementById('answerDisplay').innerText = currentAnswer;
     }
 
-    socket.on('new_question', (data) => {
-      document.getElementById('questionText').innerText = data.questionText;
-      currentAnswer = "";
-      updateDisplay();
-      
-      document.getElementById('numpadArea').classList.remove('disabled-numpad');
-      document.getElementById('statusMsg').innerText = '';
-    });
-
-    function sendAnswer() {
+    async function sendAnswer() {
       if (currentAnswer === '') return;
-      socket.emit('submit_answer', { roomId: currentRoom, answer: currentAnswer });
+      
+      await apiCall('submit_answer', { answer: currentAnswer });
 
       document.getElementById('numpadArea').classList.add('disabled-numpad');
       const statusElement = document.getElementById('statusMsg');

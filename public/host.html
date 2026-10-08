@@ -6,7 +6,8 @@
   <title>Layar Utama - SPENFORTY</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="/socket.io/socket.io.js"></script>
+  <!-- Ganti Socket.io dengan Pusher -->
+  <script src="https://js.pusher.com/8.0/pusher.min.js"></script>
   <style>
     /* Transisi timer agar halus */
     #timerBar { transition: width linear; }
@@ -73,18 +74,35 @@
   </div>
 
   <script>
-    const socket = io();
-    const roomId = "MATH123";
+    // Inisialisasi Pusher
+    const pusher = new Pusher('a36b831383bbba2fdf2f', {
+      cluster: 'ap1'
+    });
 
-    socket.emit('create_room', roomId);
+    const roomId = "MATH123";
+    const userId = "host-" + Math.floor(Math.random() * 10000);
+    const channel = pusher.subscribe(`room-${roomId}`);
+
     document.getElementById('roomCodeDisplay').innerText = roomId;
+
+    // Fungsi Fetch ke API Vercel
+    async function apiCall(action, payload = {}) {
+      return fetch('/api', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, roomId, userId, ...payload })
+      });
+    }
+
+    // Buat room saat layar host dibuka
+    apiCall('create_room');
 
     function startQuiz() {
       document.getElementById('startBtn').style.display = 'none';
-      socket.emit('start_question', roomId);
+      apiCall('start_question');
     }
 
-    socket.on('new_question', (data) => {
+    channel.bind('new_question', (data) => {
       document.getElementById('questionBox').innerText = data.questionText;
       document.getElementById('categoryBadge').innerText = `${data.category} (${data.duration}s)`;
       document.getElementById('fastestName').innerText = "Menunggu jawaban...";
@@ -98,9 +116,14 @@
         bar.style.transition = `width ${data.duration}s linear`;
         bar.style.width = '0%';
       }, 50);
+
+      // Otomatis memproses hasil saat timer habis (Menggantikan setTimeout di server.js lama)
+      setTimeout(() => {
+        apiCall('process_results');
+      }, data.duration * 1000);
     });
 
-    socket.on('round_results', (data) => {
+    channel.bind('round_results', (data) => {
       document.getElementById('fastestName').innerText = data.fastestName;
       document.getElementById('fastestTime').innerText = data.fastestTime;
       
@@ -110,16 +133,7 @@
       const list = document.getElementById('leaderboardList');
       list.innerHTML = '';
       data.leaderboard.forEach((player, idx) => {
-        // Efek warna emas untuk juara 1
         const isFirst = idx === 0 ? 'text-amber-400 font-bold text-lg' : 'text-slate-200';
         list.innerHTML += `
           <li class="flex justify-between items-center bg-slate-700/50 p-3 rounded-lg border border-slate-600/50">
-            <span class="${isFirst}">${idx + 1}. ${player.name}</span>
-            <strong class="${isFirst} bg-slate-800 px-3 py-1 rounded-md">${player.score} p</strong>
-          </li>
-        `;
-      });
-    });
-  </script>
-</body>
-</html>
+            <span class="${isFirst}">${

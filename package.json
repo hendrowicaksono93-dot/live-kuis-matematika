@@ -11,7 +11,8 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@upstash/redis": "^1.39.0",
     "express": "^5.2.1",
-    "socket.io": "^4.8.4"
+    "pusher": "^5.3.4"
   }
 }
