@@ -136,4 +136,17 @@
         const isFirst = idx === 0 ? 'text-amber-400 font-bold text-lg' : 'text-slate-200';
         list.innerHTML += `
           <li class="flex justify-between items-center bg-slate-700/50 p-3 rounded-lg border border-slate-600/50">
-            <span class="${isFirst}">${
+            <span class="${isFirst}">${idx + 1}. ${player.name}</span>
+            <strong class="${isFirst} bg-slate-800 px-3 py-1 rounded-md">${player.score} p</strong>
+          </li>
+        `;
+      });
+
+      // Otomatis lanjut soal berikutnya setelah 5 detik
+      setTimeout(() => {
+        apiCall('start_question');
+      }, 5000);
+    });
+  </script>
+</body>
+</html>
