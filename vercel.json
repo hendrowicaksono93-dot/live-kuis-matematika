@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/", "destination": "/public/host.html" },
     { "source": "/host", "destination": "/public/host.html" },
     { "source": "/play", "destination": "/public/play.html" }
   ]
