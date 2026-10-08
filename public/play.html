@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Jawab Soal - SPENFORTY</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    /* Mencegah zoom di HP saat tap cepat */
+    body { touch-action: manipulation; }
+    .disabled-numpad { opacity: 0.4; pointer-events: none; }
+  </style>
+</head>
+<body class="bg-slate-900 text-white font-sans min-h-screen flex flex-col items-center p-4">
+
+  <!-- Header HP -->
+  <div class="flex flex-col items-center mt-4 mb-6">
+    <img src="https://smpnegeri40suroboyo.wordpress.com/wp-content/uploads/2020/06/cropped-cilik-web.png" alt="Logo Spenforty" class="h-16 mb-2 drop-shadow-md">
+    <h2 class="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 text-center">
+      TANTANGAN MATEMATIKA<br>SPENFORTY
+    </h2>
+  </div>
+
+  <!-- Form Masuk -->
+  <div id="joinSection" class="w-full max-w-sm bg-slate-800 border border-slate-700 p-6 rounded-2xl shadow-xl flex flex-col gap-4">
+    <h3 class="text-center text-lg font-bold text-slate-300 border-b border-slate-600 pb-2">Masuk Game</h3>
+    <input type="text" id="usernameInput" placeholder="Ketik Nama Panggilanmu" class="w-full p-4 text-center rounded-xl bg-slate-900 border-2 border-slate-600 focus:border-cyan-400 focus:outline-none text-lg font-bold">
+    <input type="text" id="roomInput" placeholder="Kode Room (Contoh: MATH123)" class="w-full p-4 text-center rounded-xl bg-slate-900 border-2 border-slate-600 focus:border-cyan-400 focus:outline-none text-lg font-bold uppercase">
+    <button onclick="joinGame()" class="w-full bg-cyan-500 hover:bg-cyan-600 text-slate-900 font-black text-xl py-4 rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.4)] transition-all active:scale-95 mt-2">
+      GABUNG SEKARANG
+    </button>
+  </div>
+
+  <!-- Area Jawab Soal (Numpad) -->
+  <div id="gameSection" class="w-full max-w-sm bg-slate-800 border border-slate-700 p-5 rounded-2xl shadow-xl hidden">
+    <h3 id="questionText" class="text-center text-3xl font-black text-white mb-4 drop-shadow-md">
+      Menunggu...
+    </h3>
+    
+    <!-- Layar Angka Jawaban -->
+    <div id="answerDisplay" class="w-full h-16 bg-slate-950 border-2 border-slate-600 rounded-xl flex items-center justify-center text-3xl font-bold text-white mb-6">
+    </div>
+    
+    <!-- Grid Numpad Tailwind -->
+    <div id="numpadArea" class="grid grid-cols-3 gap-3 disabled-numpad">
+      <button onclick="pressNum('1')" class="bg-slate-700 active:bg-slate-600 py-4 text-2xl font-bold rounded-xl shadow-md">1</button>
+      <button onclick="pressNum('2')" class="bg-slate-700 active:bg-slate-600 py-4 text-2xl font-bold rounded-xl shadow-md">2</button>
+      <button onclick="pressNum('3')" class="bg-slate-700 active:bg-slate-600 py-4 text-2xl font-bold rounded-xl shadow-md">3</button>
+      
+      <button onclick="pressNum('4')" class="bg-slate-700 active:bg-slate-600 py-4 text-2xl font-bold rounded-xl shadow-md">4</button>
+      <button onclick="pressNum('5')" class="bg-slate-700 active:bg-slate-600 py-4 text-2xl font-bold rounded-xl shadow-md">5</button>
+      <button onclick="pressNum('6')" class="bg-slate-700 active:bg-slate-600 py-4 text-2xl font-bold rounded-xl shadow-md">6</button>
+      
+      <button onclick="pressNum('7')" class="bg-slate-700 active:bg-slate-600 py-4 text-2xl font-bold rounded-xl shadow-md">7</button>
+      <button onclick="pressNum('8')" class="bg-slate-700 active:bg-slate-600 py-4 text-2xl font-bold rounded-xl shadow-md">8</button>
+      <button onclick="pressNum('9')" class="bg-slate-700 active:bg-slate-600 py-4 text-2xl font-bold rounded-xl shadow-md">9</button>
+      
+      <button onclick="deleteNum()" class="bg-red-500 active:bg-red-600 py-4 text-2xl font-bold rounded-xl shadow-md">⌫</button>
+      <button onclick="pressNum('0')" class="bg-slate-700 active:bg-slate-600 py-4 text-2xl font-bold rounded-xl shadow-md">0</button>
+      <button onclick="clearNum()" class="bg-amber-500 active:bg-amber-600 text-slate-900 py-4 text-2xl font-black rounded-xl shadow-md">C</button>
+      
+      <!-- Tombol Kirim Penuh -->
+      <button onclick="sendAnswer()" class="col-span-3 bg-green-500 active:bg-green-600 py-4 text-xl font-black rounded-xl shadow-lg mt-2 tracking-wide uppercase">
+        KIRIM JAWABAN
+      </button>
+    </div>
+
+    <div id="statusMsg" class="text-center text-lg font-bold mt-4 h-6"></div>
+  </div>
+
+  <script>
+    const socket = io();
+    let currentRoom = "";
+    let currentAnswer = "";
+
+    function joinGame() {
+      const username = document.getElementById('usernameInput').value;
+      const room = document.getElementById('roomInput').value.toUpperCase();
+      if (!username || !room) return alert("Isi nama dan kode room!");
+
+      currentRoom = room;
+      socket.emit('join_room', { roomId: room, username });
+    }
+
+    socket.on('joined_successfully', (data) => {
+      document.getElementById('joinSection').classList.add('hidden');
+      document.getElementById('gameSection').classList.remove('hidden');
+    });
+
+    socket.on('join_error', (msg) => alert(msg));
+
+    function pressNum(num) {
+      if (currentAnswer.length < 5) {
+        currentAnswer += num;
+        updateDisplay();
+      }
+    }
+
+    function deleteNum() {
+      currentAnswer = currentAnswer.slice(0, -1);
+      updateDisplay();
+    }
+
+    function clearNum() {
+      currentAnswer = "";
+      updateDisplay();
+    }
+
+    function updateDisplay() {
+      document.getElementById('answerDisplay').innerText = currentAnswer;
+    }
+
+    socket.on('new_question', (data) => {
+      document.getElementById('questionText').innerText = data.questionText;
+      currentAnswer = "";
+      updateDisplay();
+      
+      document.getElementById('numpadArea').classList.remove('disabled-numpad');
+      document.getElementById('statusMsg').innerText = '';
+    });
+
+    function sendAnswer() {
+      if (currentAnswer === '') return;
+      socket.emit('submit_answer', { roomId: currentRoom, answer: currentAnswer });
+
+      document.getElementById('numpadArea').classList.add('disabled-numpad');
+      const statusElement = document.getElementById('statusMsg');
+      statusElement.innerText = "✅ Terkirim! Menunggu...";
+      statusElement.className = "text-center text-lg font-bold mt-4 text-green-400 h-6";
+    }
+  </script>
+</body>
+</html>
