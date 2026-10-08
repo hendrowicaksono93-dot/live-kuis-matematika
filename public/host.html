@@ -9,24 +9,20 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Pusher CDN -->
   <script src="https://js.pusher.com/8.0/pusher.min.js"></script>
+  <!-- Canvas Confetti CDN untuk Efek Meriah -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
-    /* Transisi timer & animasi perubahan orientasi layar */
+    /* Transisi timer & animasi layout */
     #timerBar { transition: width linear; }
-    .smooth-layout {
-      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    }
+    .smooth-layout { transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
 
-    /* Tata Letak Potret (Default / Layar HP & Tablet Berdiri) */
     .main-container {
       display: flex;
       flex-direction: column;
       gap: 1.25rem;
       width: 100%;
     }
-    .question-box-container {
-      order: 1;
-      width: 100%;
-    }
+    .question-box-container { order: 1; width: 100%; }
     .leaderboards-wrapper {
       order: 2;
       display: grid;
@@ -35,31 +31,22 @@
       width: 100%;
     }
 
-    /* Tata Letak Lanskap (Layar Laptop, Proyektor & HP Miring) */
     @media (orientation: landscape) and (min-width: 640px) {
       .main-container {
         display: grid;
         grid-template-columns: 1fr 2fr 1fr;
         gap: 1.5rem;
       }
-      .question-box-container {
-        order: 2;
-      }
-      .leaderboards-wrapper {
-        display: contents;
-      }
-      .fastest-container {
-        order: 1;
-      }
-      .topscore-container {
-        order: 3;
-      }
+      .question-box-container { order: 2; }
+      .leaderboards-wrapper { display: contents; }
+      .fastest-container { order: 1; }
+      .topscore-container { order: 3; }
     }
   </style>
 </head>
 <body class="bg-slate-900 text-white font-sans min-h-screen p-4 sm:p-6 flex flex-col items-center">
 
-  <!-- Header dengan Logo -->
+  <!-- Header -->
   <div class="flex flex-col items-center mb-4 text-center">
     <img src="https://smpnegeri40suroboyo.wordpress.com/wp-content/uploads/2020/06/cropped-cilik-web.png" alt="Logo Spenforty" class="h-20 sm:h-24 mb-2 drop-shadow-md">
     <h1 class="text-2xl sm:text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 tracking-wider">
@@ -68,35 +55,34 @@
     <h2 class="mt-1 text-lg sm:text-xl text-slate-300">Kode Room: <span id="roomCodeDisplay" class="text-amber-400 font-bold text-2xl">-</span></h2>
   </div>
 
-  <button id="startBtn" onclick="startQuiz()" class="mb-6 bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-full text-xl font-bold shadow-[0_0_15px_rgba(34,197,94,0.5)] transition-all transform hover:scale-105">
-    ▶ MULAI KUIS (OTOMATIS)
-  </button>
+  <!-- Tombol Kontrol Kuis -->
+  <div class="flex gap-4 mb-6">
+    <button id="startBtn" onclick="startQuiz()" class="bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-full text-xl font-bold shadow-[0_0_15px_rgba(34,197,94,0.5)] transition-all transform hover:scale-105">
+      ▶ MULAI KUIS
+    </button>
+    <button id="stopBtn" onclick="stopQuiz()" class="hidden bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-full text-xl font-bold shadow-[0_0_15px_rgba(220,38,38,0.5)] transition-all transform hover:scale-105">
+      🛑 HENTIKAN & LIHAT JUARA
+    </button>
+  </div>
 
-  <!-- Container Utama Layout -->
+  <!-- Container Utama -->
   <div class="main-container smooth-layout max-w-7xl">
     
     <!-- Kotak Soal -->
     <div class="question-box-container smooth-layout bg-slate-800 border border-slate-700 rounded-2xl p-5 sm:p-6 shadow-2xl flex flex-col relative overflow-hidden">
-      
       <div class="flex justify-between items-center mb-4">
         <div id="categoryBadge" class="bg-cyan-600 text-white px-4 py-1 rounded-full text-xs sm:text-sm font-bold tracking-wide uppercase">
           MENUNGGU MULAI
         </div>
       </div>
-
-      <!-- Timer Bar -->
       <div class="w-full bg-slate-700 h-3 rounded-full overflow-hidden mb-6">
         <div id="timerBar" class="h-full bg-green-400 w-full rounded-full"></div>
       </div>
-
-      <!-- Teks Soal -->
       <div class="flex-1 min-h-[160px] flex items-center justify-center bg-slate-950 border-2 border-cyan-500/50 rounded-xl p-6 mb-6 shadow-inner">
         <h2 id="questionBox" class="text-4xl sm:text-6xl md:text-7xl font-black text-white text-center drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">
           SIAP?
         </h2>
       </div>
-      
-      <!-- Box Penjawab Tercepat Ronde Ini -->
       <div class="bg-indigo-950/50 border border-indigo-500/50 rounded-xl p-3 text-center">
         <div class="text-indigo-300 text-xs font-bold uppercase tracking-widest mb-0.5">⚡ Tercepat Ronde Ini</div>
         <div class="text-lg sm:text-xl text-white font-bold truncate">
@@ -106,43 +92,83 @@
       </div>
     </div>
 
-    <!-- Wrapper Leaderboards -->
     <div class="leaderboards-wrapper smooth-layout">
-      
-      <!-- Leaderboard Kiri: 10 Siswa Tercepat & Benar -->
+      <!-- 10 Tercepat -->
       <div class="fastest-container smooth-layout bg-slate-800 border border-slate-700 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col">
-        <h3 class="text-cyan-400 font-extrabold text-base sm:text-lg mb-3 flex items-center gap-2 border-b border-slate-700 pb-2.5 truncate">
-          ⚡ TOP 10 TERCEPAT
-        </h3>
+        <h3 class="text-cyan-400 font-extrabold text-base sm:text-lg mb-3 border-b border-slate-700 pb-2.5 truncate">⚡ TOP 10 TERCEPAT</h3>
         <ol id="fastestList" class="flex flex-col gap-2 overflow-y-auto max-h-[380px] pr-1">
           <li class="text-slate-400 text-center italic text-xs sm:text-sm py-4">Belum ada data</li>
         </ol>
       </div>
-
-      <!-- Leaderboard Kanan: 10 Siswa Poin Tertinggi -->
+      <!-- 10 Skor -->
       <div class="topscore-container smooth-layout bg-slate-800 border border-slate-700 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col">
-        <h3 class="text-amber-400 font-extrabold text-base sm:text-lg mb-3 flex items-center gap-2 border-b border-slate-700 pb-2.5 truncate">
-          🏆 TOP 10 SKOR
-        </h3>
+        <h3 class="text-amber-400 font-extrabold text-base sm:text-lg mb-3 border-b border-slate-700 pb-2.5 truncate">🏆 TOP 10 SKOR</h3>
         <ol id="leaderboardList" class="flex flex-col gap-2 overflow-y-auto max-h-[380px] pr-1">
           <li class="text-slate-400 text-center italic text-xs sm:text-sm py-4">Belum ada data</li>
         </ol>
       </div>
+    </div>
+  </div>
+
+  <!-- OVERLAY PODIUM JUARA -->
+  <div id="podiumOverlay" class="fixed inset-0 z-50 bg-slate-950/90 flex-col items-center justify-center hidden opacity-0 transition-opacity duration-1000 backdrop-blur-xl">
+    
+    <h1 id="podiumTitle" class="text-5xl sm:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-600 drop-shadow-[0_0_20px_rgba(253,224,71,0.6)] text-center mb-8 transform scale-0 transition-transform duration-700 ease-out">
+      JUARA SPENFORTY
+    </h1>
+
+    <!-- 3D Podium Container -->
+    <div class="flex items-end justify-center gap-2 sm:gap-6 mt-4 h-72 sm:h-96 w-full px-4 overflow-hidden relative">
+      
+      <!-- Juara 2 (Perak) -->
+      <div id="podium2" class="flex flex-col items-center transform translate-y-full transition-transform duration-1000 ease-out z-20">
+        <div id="name2" class="text-lg sm:text-2xl font-bold text-slate-200 mb-1 truncate w-24 sm:w-36 text-center drop-shadow-md">-</div>
+        <div id="score2" class="text-sm sm:text-base text-slate-400 mb-2 font-bold bg-slate-800 px-3 rounded-full">0p</div>
+        <div class="w-24 sm:w-36 h-40 sm:h-52 bg-gradient-to-b from-slate-300 to-slate-500 rounded-t-xl shadow-[0_0_30px_rgba(203,213,225,0.4)] flex justify-center pt-4 border-t-4 border-slate-100 relative overflow-hidden">
+          <div class="absolute inset-0 bg-white/20"></div>
+          <span class="text-5xl font-black text-slate-700">2</span>
+        </div>
+      </div>
+
+      <!-- Juara 1 (Emas) -->
+      <div id="podium1" class="flex flex-col items-center transform translate-y-full transition-transform duration-1000 ease-out z-30">
+        <div class="text-5xl sm:text-7xl mb-2 animate-bounce drop-shadow-[0_0_15px_rgba(251,191,36,0.8)]">👑</div>
+        <div id="name1" class="text-xl sm:text-3xl font-black text-amber-300 mb-1 truncate w-28 sm:w-44 text-center drop-shadow-[0_0_15px_rgba(251,191,36,0.8)]">-</div>
+        <div id="score1" class="text-sm sm:text-base text-amber-200 mb-2 font-bold bg-amber-900/50 px-4 rounded-full border border-amber-500/50">0p</div>
+        <div class="w-28 sm:w-44 h-56 sm:h-72 bg-gradient-to-b from-amber-400 to-amber-600 rounded-t-xl shadow-[0_0_50px_rgba(251,191,36,0.6)] flex justify-center pt-4 border-t-4 border-amber-200 relative overflow-hidden">
+          <div class="absolute inset-0 bg-white/20"></div>
+          <span class="text-6xl font-black text-amber-900">1</span>
+        </div>
+      </div>
+
+      <!-- Juara 3 (Perunggu) -->
+      <div id="podium3" class="flex flex-col items-center transform translate-y-full transition-transform duration-1000 ease-out z-10">
+        <div id="name3" class="text-base sm:text-xl font-bold text-amber-600 mb-1 truncate w-24 sm:w-36 text-center drop-shadow-md">-</div>
+        <div id="score3" class="text-sm sm:text-base text-amber-700 mb-2 font-bold bg-amber-950/50 px-3 rounded-full">0p</div>
+        <div class="w-24 sm:w-36 h-28 sm:h-36 bg-gradient-to-b from-amber-700 to-amber-900 rounded-t-xl shadow-[0_0_20px_rgba(180,83,9,0.4)] flex justify-center pt-4 border-t-4 border-amber-600 relative overflow-hidden">
+          <div class="absolute inset-0 bg-white/10"></div>
+          <span class="text-4xl font-black text-amber-950">3</span>
+        </div>
+      </div>
 
     </div>
 
+    <!-- Tombol Tutup -->
+    <button onclick="location.reload()" class="mt-12 bg-white text-slate-900 px-10 py-3 rounded-full font-black text-lg hover:bg-slate-200 transition-all opacity-0 duration-1000" id="closePodiumBtn">
+      TUTUP & KEMBALI
+    </button>
   </div>
 
   <script>
-    const pusher = new Pusher('a36b831383bbba2fdf2f', {
-      cluster: 'ap1'
-    });
-
+    const pusher = new Pusher('a36b831383bbba2fdf2f', { cluster: 'ap1' });
     const roomId = "MATH123";
     const userId = "host-" + Math.floor(Math.random() * 10000);
     const channel = pusher.subscribe(`room-${roomId}`);
 
     document.getElementById('roomCodeDisplay').innerText = roomId;
+
+    let isQuizActive = false;
+    let currentLeaderboard = []; // Menyimpan data juara sementara
 
     async function apiCall(action, payload = {}) {
       return fetch('/api', {
@@ -155,8 +181,68 @@
     apiCall('create_room');
 
     function startQuiz() {
+      isQuizActive = true;
       document.getElementById('startBtn').style.display = 'none';
+      document.getElementById('stopBtn').classList.remove('hidden');
       apiCall('start_question');
+    }
+
+    // FUNGSI MENGHENTIKAN KUIS DAN MENAMPILKAN PODIUM
+    function stopQuiz() {
+      if(!confirm("Yakin ingin menghentikan kuis dan melihat juara?")) return;
+      
+      isQuizActive = false; // Mencegah soal selanjutnya muncul
+      
+      const overlay = document.getElementById('podiumOverlay');
+      overlay.classList.remove('hidden');
+      overlay.classList.add('flex');
+      
+      // Tunggu sebentar untuk memicu transisi CSS
+      setTimeout(() => {
+        overlay.classList.remove('opacity-0');
+        document.getElementById('podiumTitle').classList.remove('scale-0');
+
+        // Mengisi Nama dan Skor dari Leaderboard
+        document.getElementById('name1').innerText = currentLeaderboard[0] ? currentLeaderboard[0].name : 'Kosong';
+        document.getElementById('score1').innerText = currentLeaderboard[0] ? currentLeaderboard[0].score + 'p' : '-';
+        
+        document.getElementById('name2').innerText = currentLeaderboard[1] ? currentLeaderboard[1].name : 'Kosong';
+        document.getElementById('score2').innerText = currentLeaderboard[1] ? currentLeaderboard[1].score + 'p' : '-';
+        
+        document.getElementById('name3').innerText = currentLeaderboard[2] ? currentLeaderboard[2].name : 'Kosong';
+        document.getElementById('score3').innerText = currentLeaderboard[2] ? currentLeaderboard[2].score + 'p' : '-';
+
+        // Animasi kemunculan podium berurutan (Juara 3 -> 2 -> 1)
+        setTimeout(() => document.getElementById('podium3').classList.remove('translate-y-full'), 500);
+        setTimeout(() => document.getElementById('podium2').classList.remove('translate-y-full'), 1200);
+        setTimeout(() => {
+          document.getElementById('podium1').classList.remove('translate-y-full');
+          triggerConfetti(); // Ledakkan Confetti saat Juara 1 muncul!
+          
+          setTimeout(() => {
+            document.getElementById('closePodiumBtn').classList.remove('opacity-0');
+          }, 2000);
+        }, 2000);
+
+      }, 100);
+    }
+
+    // EFEK LEDAKAN CONFETTI
+    function triggerConfetti() {
+      const duration = 8 * 1000;
+      const animationEnd = Date.now() + duration;
+      const defaults = { startVelocity: 40, spread: 360, ticks: 100, zIndex: 100 };
+
+      function randomInRange(min, max) { return Math.random() * (max - min) + min; }
+
+      const interval = setInterval(function() {
+        const timeLeft = animationEnd - Date.now();
+        if (timeLeft <= 0) return clearInterval(interval);
+
+        const particleCount = 50 * (timeLeft / duration);
+        confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+        confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+      }, 250);
     }
 
     channel.bind('new_question', (data) => {
@@ -175,14 +261,15 @@
       }, 50);
 
       setTimeout(() => {
-        apiCall('process_results');
+        if(isQuizActive) apiCall('process_results');
       }, data.duration * 1000);
     });
 
     channel.bind('round_results', (data) => {
+      currentLeaderboard = data.leaderboard; // Update data terbaru untuk podium
+
       document.getElementById('fastestName').innerText = data.fastestName;
       document.getElementById('fastestTime').innerText = data.fastestTime;
-      
       document.getElementById('categoryBadge').innerText = "⏳ Bersiap... Soal berikutnya dalam 5 detik!";
       document.getElementById('questionBox').innerText = `Jawaban: ${data.correctAnswer}`;
 
@@ -194,16 +281,8 @@
             <li class="flex justify-between items-center bg-slate-700/50 p-2 sm:p-2.5 rounded-lg border border-slate-600/50 text-xs sm:text-sm">
               <span class="text-slate-200 font-medium truncate">${idx + 1}. ${item.name}</span>
               <span class="text-amber-400 font-bold bg-slate-900 px-2 py-0.5 rounded text-xs">${item.time}</span>
-            </li>
-          `;
+            </li>`;
         });
-      } else if (data.fastestName && data.fastestName !== 'Tidak Ada') {
-        fastestListEl.innerHTML = `
-          <li class="flex justify-between items-center bg-indigo-950/60 p-2.5 rounded-lg border border-indigo-500/40 text-xs sm:text-sm">
-            <span class="text-indigo-200 font-bold truncate">⚡ ${data.fastestName}</span>
-            <span class="text-amber-400 font-bold bg-slate-900 px-2 py-0.5 rounded text-xs">${data.fastestTime}</span>
-          </li>
-        `;
       } else {
         fastestListEl.innerHTML = `<li class="text-slate-400 text-center italic text-xs sm:text-sm py-4">Tidak ada jawaban benar</li>`;
       }
@@ -211,39 +290,22 @@
       const list = document.getElementById('leaderboardList');
       list.innerHTML = '';
       data.leaderboard.forEach((player, idx) => {
-        let medalIcon = '';
-        let rankStyle = 'text-slate-200';
-        let borderStyle = 'border-slate-600/50 bg-slate-700/50';
-
-        if (idx === 0) {
-          medalIcon = '<span class="text-base sm:text-lg">🥇</span> ';
-          rankStyle = 'text-amber-300 font-extrabold';
-          borderStyle = 'border-amber-500/50 bg-amber-950/30';
-        } else if (idx === 1) {
-          medalIcon = '<span class="text-base sm:text-lg">🥈</span> ';
-          rankStyle = 'text-slate-200 font-bold';
-          borderStyle = 'border-slate-400/50 bg-slate-800/60';
-        } else if (idx === 2) {
-          medalIcon = '<span class="text-base sm:text-lg">🥉</span> ';
-          rankStyle = 'text-amber-600 font-bold';
-          borderStyle = 'border-amber-700/50 bg-slate-800/60';
-        } else {
-          medalIcon = `<span class="text-slate-400 font-semibold w-5 inline-block">${idx + 1}.</span> `;
-        }
+        let medalIcon = idx === 0 ? '🥇 ' : idx === 1 ? '🥈 ' : idx === 2 ? '🥉 ' : `<span class="text-slate-400 font-semibold w-5 inline-block">${idx + 1}.</span> `;
+        let rankStyle = idx === 0 ? 'text-amber-300 font-extrabold' : idx === 1 ? 'text-slate-200 font-bold' : idx === 2 ? 'text-amber-600 font-bold' : 'text-slate-200';
+        let borderStyle = idx === 0 ? 'border-amber-500/50 bg-amber-950/30' : idx === 1 ? 'border-slate-400/50 bg-slate-800/60' : idx === 2 ? 'border-amber-700/50 bg-slate-800/60' : 'border-slate-600/50 bg-slate-700/50';
 
         list.innerHTML += `
           <li class="flex justify-between items-center p-2 sm:p-2.5 rounded-lg border ${borderStyle} text-xs sm:text-sm transition-all">
             <div class="flex items-center gap-1.5 overflow-hidden">
-              ${medalIcon}
-              <span class="${rankStyle} truncate">${player.name}</span>
+              ${medalIcon} <span class="${rankStyle} truncate">${player.name}</span>
             </div>
             <strong class="${rankStyle} bg-slate-900 px-2.5 py-1 rounded-md text-xs">${player.score} p</strong>
-          </li>
-        `;
+          </li>`;
       });
 
+      // Lanjut otomatis HANYA jika kuis masih aktif (Belum di-Stop)
       setTimeout(() => {
-        apiCall('start_question');
+        if(isQuizActive) apiCall('start_question');
       }, 5000);
     });
   </script>
