@@ -1,80 +1,76 @@
-const Pusher = require('pusher');
-const { Redis } = require('@upstash/redis');
+import { Redis } from '@upstash/redis';
+import Pusher from 'pusher';
 
-// Koneksi ke Pusher (Pengganti Socket.io)
-const pusher = new Pusher({
-  appId: process.env.PUSHER_APP_ID,
-  key: process.env.PUSHER_KEY,
-  secret: process.env.PUSHER_SECRET,
-  cluster: process.env.PUSHER_CLUSTER,
-  useTLS: true
-});
-
-// Koneksi ke Upstash Redis (Pengganti RAM laptop)
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
   token: process.env.UPSTASH_REDIS_REST_TOKEN,
 });
 
-// Fungsi Pembuat Soal (Sama persis dengan milikmu)
+const pusher = new Pusher({
+  appId: process.env.PUSHER_APP_ID,
+  key: process.env.PUSHER_KEY,
+  secret: process.env.PUSHER_SECRET,
+  cluster: process.env.PUSHER_CLUSTER,
+  useTLS: true,
+});
+
+// Generator Soal Acak
 function generateQuestion() {
-  const type = Math.floor(Math.random() * 4) + 1;
-  if (type === 1) {
-    let n1 = Math.floor(Math.random() * 20) + 10;
-    let n2 = Math.floor(Math.random() * 20) + 10;
-    let n3 = Math.floor(Math.random() * 20) + 10;
-    let op1 = Math.random() > 0.5 ? '+' : '-';
-    let op2 = Math.random() > 0.5 ? '+' : '-';
-    let expr = `${n1} ${op1} ${n2}`;
-    let mid = eval(expr);
-    if (mid < 0) { op1 = '+'; expr = `${n1} + ${n2}`; mid = n1 + n2; }
-    let finalExpr = `${expr} ${op2} ${n3}`;
-    let ans = eval(finalExpr);
-    if (ans < 0) { op2 = '+'; finalExpr = `${expr} + ${n3}`; ans = mid + n3; }
-    return { questionText: `${finalExpr} = ?`, correctAnswer: ans, duration: 15, category: 'Campuran Puluhan (+/-)' };
-  } else if (type === 2) {
-    let n1 = Math.floor(Math.random() * 8) + 2;
-    let n2 = Math.floor(Math.random() * 8) + 2;
-    return { questionText: `${n1} × ${n2} = ?`, correctAnswer: n1 * n2, duration: 10, category: 'Perkalian 1 Digit' };
-  } else if (type === 3) {
-    let n1 = Math.floor(Math.random() * 90) + 10;
-    let n2 = Math.floor(Math.random() * 8) + 2;
-    return { questionText: `${n1} × ${n2} = ?`, correctAnswer: n1 * n2, duration: 15, category: 'Perkalian 2×1 Digit' };
+  const categories = ['Mudah', 'Sedang', 'Sulit'];
+  const category = categories[Math.floor(Math.random() * categories.length)];
+  let num1, num2, operator, correctAnswer, duration;
+
+  if (category === 'Mudah') {
+    num1 = Math.floor(Math.random() * 20) + 1;
+    num2 = Math.floor(Math.random() * 20) + 1;
+    operator = Math.random() > 0.5 ? '+' : '-';
+    correctAnswer = operator === '+' ? num1 + num2 : num1 - num2;
+    duration = 10;
+  } else if (category === 'Sedang') {
+    num1 = Math.floor(Math.random() * 12) + 2;
+    num2 = Math.floor(Math.random() * 12) + 2;
+    operator = '×';
+    correctAnswer = num1 * num2;
+    duration = 15;
   } else {
-    let divisor = Math.floor(Math.random() * 8) + 2;
-    let quotient = Math.floor(Math.random() * 10) + 2;
-    let dividend = divisor * quotient;
-    while (dividend < 10 || dividend > 99) {
-      quotient = Math.floor(Math.random() * 10) + 2;
-      dividend = divisor * quotient;
-    }
-    return { questionText: `${dividend} ÷ ${divisor} = ?`, correctAnswer: quotient, duration: 12, category: 'Pembagian 2×1 Digit' };
+    num2 = Math.floor(Math.random() * 10) + 2;
+    correctAnswer = Math.floor(Math.random() * 10) + 2;
+    num1 = num2 * correctAnswer;
+    operator = '÷';
+    duration = 20;
   }
+
+  return {
+    questionText: `${num1} ${operator} ${num2} = ?`,
+    correctAnswer: String(correctAnswer),
+    category,
+    duration,
+    startTime: Date.now()
+  };
 }
 
-// Handler Vercel API
-module.exports = async function(req, res) {
-  // Hanya menerima metode POST
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Metode tidak diizinkan' });
+export default async function handler(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
   const { action, roomId, userId, username, answer } = req.body;
 
   try {
     if (action === 'create_room') {
-      await redis.set(`room:${roomId}`, { hostId: userId, players: {}, currentQuestion: null, startTime: null, answers: [] });
-      return res.status(200).json({ success: true, roomId });
+      let room = await redis.get(`room:${roomId}`);
+      if (!room) {
+        room = { roomId, players: {}, answers: [], currentQuestion: null };
+        await redis.set(`room:${roomId}`, room);
+      }
+      return res.status(200).json({ success: true, room });
     }
 
     if (action === 'join_room') {
       let room = await redis.get(`room:${roomId}`);
-      if (!room) return res.status(404).json({ error: 'Kode Room tidak ditemukan!' });
+      if (!room) return res.status(404).json({ error: 'Room tidak ditemukan' });
 
       room.players[userId] = { name: username, score: 0 };
       await redis.set(`room:${roomId}`, room);
-
-      // Beri tahu host ada pemain masuk
-      await pusher.trigger(`room-${roomId}`, 'player_joined', Object.values(room.players));
-      return res.status(200).json({ success: true, username, roomId });
+      return res.status(200).json({ success: true });
     }
 
     if (action === 'start_question') {
@@ -83,38 +79,61 @@ module.exports = async function(req, res) {
 
       const q = generateQuestion();
       room.currentQuestion = q;
-      room.startTime = Date.now();
-      room.answers = [];
+      room.answers = []; // Reset jawaban ronde ini
+
       await redis.set(`room:${roomId}`, room);
 
-      // Kirim soal ke semua HP siswa dan layar
       await pusher.trigger(`room-${roomId}`, 'new_question', {
         questionText: q.questionText,
-        duration: q.duration,
-        category: q.category
+        category: q.category,
+        duration: q.duration
       });
-      return res.status(200).json({ success: true, duration: q.duration });
+
+      return res.status(200).json({ success: true, question: q });
     }
 
+    // PROSES JAWABAN REAL-TIME DARI SISWA
     if (action === 'submit_answer') {
       let room = await redis.get(`room:${roomId}`);
-      if (!room || !room.currentQuestion) return res.status(400).json({ error: 'Tidak ada soal aktif' });
+      if (!room || !room.currentQuestion) return res.status(404).json({ error: 'Room atau soal tidak aktif' });
 
+      const latency = Date.now() - room.currentQuestion.startTime;
+      const isCorrect = String(answer).trim() === String(room.currentQuestion.correctAnswer).trim();
+
+      const existingIdx = room.answers.findIndex(a => a.userId === userId);
       const player = room.players[userId];
-      if (!player) return res.status(400).json({ error: 'Pemain tidak ditemukan' });
+      const playerName = player ? player.name : (username || 'Siswa');
 
-      const latency = Date.now() - room.startTime;
-      const isCorrect = parseInt(answer) === room.currentQuestion.correctAnswer;
+      const answerData = { userId, name: playerName, answer, isCorrect, latency };
 
-      const alreadyAnswered = room.answers.find(a => a.userId === userId);
-      if (!alreadyAnswered) {
-        room.answers.push({ userId, name: player.name, isCorrect, latency });
-        await redis.set(`room:${roomId}`, room);
-        
-        // Beri tahu siswa bahwa jawaban sudah diterima
-        await pusher.trigger(`room-${roomId}`, 'answer_received', { userId, isCorrect });
+      if (existingIdx >= 0) {
+        room.answers[existingIdx] = answerData;
+      } else {
+        room.answers.push(answerData);
       }
-      return res.status(200).json({ success: true });
+
+      // Ambil daftar jawaban benar & urutkan berdasarkan kecepatan
+      const correctAnswers = room.answers
+        .filter(a => a.isCorrect)
+        .sort((a, b) => a.latency - b.latency);
+
+      const fastestList = correctAnswers.slice(0, 10).map(c => ({
+        name: c.name,
+        time: (c.latency / 1000).toFixed(2) + 's'
+      }));
+
+      const fastest = correctAnswers[0] || null;
+
+      await redis.set(`room:${roomId}`, room);
+
+      // BROADCAST KELUARAN SECARA LANGSUNG KE LAYAR HOST
+      await pusher.trigger(`room-${roomId}`, 'fastest_update', {
+        fastestName: fastest ? fastest.name : 'Tidak Ada',
+        fastestTime: fastest ? (fastest.latency / 1000).toFixed(2) + 's' : '-',
+        fastestList
+      });
+
+      return res.status(200).json({ success: true, isCorrect });
     }
 
     if (action === 'process_results') {
@@ -132,7 +151,6 @@ module.exports = async function(req, res) {
 
       const leaderboard = Object.values(room.players).sort((a, b) => b.score - a.score).slice(0, 10);
       
-      // Ambil 10 siswa tercepat & benar pada ronde ini
       const fastestList = correctAnswers.slice(0, 10).map(c => ({
         name: c.name,
         time: (c.latency / 1000).toFixed(2) + 's'
@@ -147,13 +165,12 @@ module.exports = async function(req, res) {
         fastestList,
         leaderboard
       });
+
       return res.status(200).json({ success: true });
     }
 
-    return res.status(400).json({ error: 'Aksi tidak valid' });
-
+    return res.status(400).json({ error: 'Action tidak dikenal' });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Terjadi kesalahan pada server' });
+    return res.status(500).json({ error: error.message });
   }
 }
