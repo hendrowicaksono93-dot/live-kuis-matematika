@@ -6,36 +6,79 @@
   <title>Layar Utama - SPENFORTY</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Ganti Socket.io dengan Pusher -->
+  <!-- Pusher CDN -->
   <script src="https://js.pusher.com/8.0/pusher.min.js"></script>
   <style>
-    /* Transisi timer agar halus */
+    /* Transisi timer & animasi perubahan orientasi layar */
     #timerBar { transition: width linear; }
+    .smooth-layout {
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Tata Letak Potret (Default / Layar HP & Tablet Berdiri) */
+    .main-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      width: 100%;
+    }
+    .question-box-container {
+      order: 1;
+      width: 100%;
+    }
+    .leaderboards-wrapper {
+      order: 2;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      width: 100%;
+    }
+
+    /* Tata Letak Lanskap (Layar Laptop, Proyektor & HP Miring) */
+    @media (orientation: landscape) and (min-width: 640px) {
+      .main-container {
+        display: grid;
+        grid-template-columns: 1fr 2fr 1fr;
+        gap: 1.5rem;
+      }
+      .question-box-container {
+        order: 2;
+      }
+      .leaderboards-wrapper {
+        display: contents; /* Menjadikan elemen anak langsung terhubung ke grid utama */
+      }
+      .fastest-container {
+        order: 1;
+      }
+      .topscore-container {
+        order: 3;
+      }
+    }
   </style>
 </head>
-<body class="bg-slate-900 text-white font-sans min-h-screen p-6 flex flex-col items-center">
+<body class="bg-slate-900 text-white font-sans min-h-screen p-4 sm:p-6 flex flex-col items-center">
 
   <!-- Header dengan Logo -->
-  <div class="flex flex-col items-center mb-6 text-center">
-    <img src="https://smpnegeri40suroboyo.wordpress.com/wp-content/uploads/2020/06/cropped-cilik-web.png" alt="Logo Spenforty" class="h-24 mb-4 drop-shadow-md">
-    <h1 class="text-3xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 tracking-wider">
+  <div class="flex flex-col items-center mb-4 text-center">
+    <img src="https://smpnegeri40suroboyo.wordpress.com/wp-content/uploads/2020/06/cropped-cilik-web.png" alt="Logo Spenforty" class="h-20 sm:h-24 mb-2 drop-shadow-md">
+    <h1 class="text-2xl sm:text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 tracking-wider">
       LIVE TANTANGAN MATEMATIKA SPENFORTY
     </h1>
-    <h2 class="mt-2 text-xl text-slate-300">Kode Room: <span id="roomCodeDisplay" class="text-amber-400 font-bold text-2xl">-</span></h2>
+    <h2 class="mt-1 text-lg sm:text-xl text-slate-300">Kode Room: <span id="roomCodeDisplay" class="text-amber-400 font-bold text-2xl">-</span></h2>
   </div>
 
-  <button id="startBtn" onclick="startQuiz()" class="mb-8 bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-full text-xl font-bold shadow-[0_0_15px_rgba(34,197,94,0.5)] transition-all transform hover:scale-105">
+  <button id="startBtn" onclick="startQuiz()" class="mb-6 bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-full text-xl font-bold shadow-[0_0_15px_rgba(34,197,94,0.5)] transition-all transform hover:scale-105">
     ▶ MULAI KUIS (OTOMATIS)
   </button>
 
-  <!-- Container Utama -->
-  <div class="w-full max-w-6xl flex flex-col md:flex-row gap-6">
+  <!-- Container Utama Layout -->
+  <div class="main-container smooth-layout max-w-7xl">
     
-    <!-- Box Kiri: Layar Soal -->
-    <div class="flex-2 w-full md:w-2/3 bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-2xl flex flex-col relative overflow-hidden">
+    <!-- Kotak Soal (Tengah di Lanskap / Atas di Potret) -->
+    <div class="question-box-container smooth-layout bg-slate-800 border border-slate-700 rounded-2xl p-5 sm:p-6 shadow-2xl flex flex-col relative overflow-hidden">
       
       <div class="flex justify-between items-center mb-4">
-        <div id="categoryBadge" class="bg-cyan-600 text-white px-4 py-1 rounded-full text-sm font-bold tracking-wide uppercase">
+        <div id="categoryBadge" class="bg-cyan-600 text-white px-4 py-1 rounded-full text-xs sm:text-sm font-bold tracking-wide uppercase">
           MENUNGGU MULAI
         </div>
       </div>
@@ -46,31 +89,47 @@
       </div>
 
       <!-- Teks Soal -->
-      <div class="flex-1 flex items-center justify-center bg-slate-950 border-2 border-cyan-500/50 rounded-xl p-8 mb-6 shadow-inner">
-        <h2 id="questionBox" class="text-6xl md:text-8xl font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">
+      <div class="flex-1 min-h-[160px] flex items-center justify-center bg-slate-950 border-2 border-cyan-500/50 rounded-xl p-6 mb-6 shadow-inner">
+        <h2 id="questionBox" class="text-4xl sm:text-6xl md:text-7xl font-black text-white text-center drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">
           SIAP?
         </h2>
       </div>
       
-      <!-- Box Penjawab Tercepat -->
-      <div class="bg-indigo-950/50 border border-indigo-500/50 rounded-xl p-4 text-center">
-        <div class="text-indigo-300 text-sm font-bold uppercase tracking-widest mb-1">⚡ Tercepat & Benar</div>
-        <div class="text-2xl text-white font-bold">
+      <!-- Box Penjawab Tercepat Ronde Ini -->
+      <div class="bg-indigo-950/50 border border-indigo-500/50 rounded-xl p-3 text-center">
+        <div class="text-indigo-300 text-xs font-bold uppercase tracking-widest mb-0.5">⚡ Tercepat Ronde Ini</div>
+        <div class="text-lg sm:text-xl text-white font-bold truncate">
           <span id="fastestName">-</span> 
-          <span id="fastestTime" class="text-amber-400 text-lg ml-2">(-)</span>
+          <span id="fastestTime" class="text-amber-400 text-base ml-2">(-)</span>
         </div>
       </div>
     </div>
 
-    <!-- Box Kanan: Klasemen -->
-    <div class="flex-1 w-full md:w-1/3 bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-2xl">
-      <h3 class="text-amber-400 font-extrabold text-xl mb-4 flex items-center gap-2 border-b border-slate-700 pb-3">
-        🏆 KLASEMEN (TOP 10)
-      </h3>
-      <ol id="leaderboardList" class="flex flex-col gap-3">
-        <li class="text-slate-400 text-center italic mt-4">Belum ada data</li>
-      </ol>
+    <!-- Wrapper Leaderboards -->
+    <div class="leaderboards-wrapper smooth-layout">
+      
+      <!-- Leaderboard Kiri: 10 Siswa Tercepat & Benar -->
+      <div class="fastest-container smooth-layout bg-slate-800 border border-slate-700 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col">
+        <h3 class="text-cyan-400 font-extrabold text-base sm:text-lg mb-3 flex items-center gap-2 border-b border-slate-700 pb-2.5 truncate">
+          ⚡ TOP 10 TERCEPAT
+        </h3>
+        <ol id="fastestList" class="flex flex-col gap-2 overflow-y-auto max-h-[380px] pr-1">
+          <li class="text-slate-400 text-center italic text-xs sm:text-sm py-4">Belum ada data</li>
+        </ol>
+      </div>
+
+      <!-- Leaderboard Kanan: 10 Siswa Poin Tertinggi -->
+      <div class="topscore-container smooth-layout bg-slate-800 border border-slate-700 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col">
+        <h3 class="text-amber-400 font-extrabold text-base sm:text-lg mb-3 flex items-center gap-2 border-b border-slate-700 pb-2.5 truncate">
+          🏆 TOP 10 SKOR
+        </h3>
+        <ol id="leaderboardList" class="flex flex-col gap-2 overflow-y-auto max-h-[380px] pr-1">
+          <li class="text-slate-400 text-center italic text-xs sm:text-sm py-4">Belum ada data</li>
+        </ol>
+      </div>
+
     </div>
+
   </div>
 
   <script>
@@ -85,7 +144,6 @@
 
     document.getElementById('roomCodeDisplay').innerText = roomId;
 
-    // Fungsi Fetch ke API Vercel
     async function apiCall(action, payload = {}) {
       return fetch('/api', {
         method: 'POST',
@@ -94,7 +152,6 @@
       });
     }
 
-    // Buat room saat layar host dibuka
     apiCall('create_room');
 
     function startQuiz() {
@@ -117,7 +174,6 @@
         bar.style.width = '0%';
       }, 50);
 
-      // Otomatis memproses hasil saat timer habis (Menggantikan setTimeout di server.js lama)
       setTimeout(() => {
         apiCall('process_results');
       }, data.duration * 1000);
@@ -130,19 +186,64 @@
       document.getElementById('categoryBadge').innerText = "⏳ Bersiap... Soal berikutnya dalam 5 detik!";
       document.getElementById('questionBox').innerText = `Jawaban: ${data.correctAnswer}`;
 
+      // Render Papan Skor Tercepat
+      const fastestListEl = document.getElementById('fastestList');
+      fastestListEl.innerHTML = '';
+      if (data.fastestList && data.fastestList.length > 0) {
+        data.fastestList.slice(0, 10).forEach((item, idx) => {
+          fastestListEl.innerHTML += `
+            <li class="flex justify-between items-center bg-slate-700/50 p-2 sm:p-2.5 rounded-lg border border-slate-600/50 text-xs sm:text-sm">
+              <span class="text-slate-200 font-medium truncate">${idx + 1}. ${item.name}</span>
+              <span class="text-amber-400 font-bold bg-slate-900 px-2 py-0.5 rounded text-xs">${item.time}</span>
+            </li>
+          `;
+        });
+      } else if (data.fastestName && data.fastestName !== 'Tidak Ada') {
+        fastestListEl.innerHTML = `
+          <li class="flex justify-between items-center bg-indigo-950/60 p-2.5 rounded-lg border border-indigo-500/40 text-xs sm:text-sm">
+            <span class="text-indigo-200 font-bold truncate">⚡ ${data.fastestName}</span>
+            <span class="text-amber-400 font-bold bg-slate-900 px-2 py-0.5 rounded text-xs">${data.fastestTime}</span>
+          </li>
+        `;
+      } else {
+        fastestListEl.innerHTML = `<li class="text-slate-400 text-center italic text-xs sm:text-sm py-4">Tidak ada jawaban benar</li>`;
+      }
+
+      // Render Papan Skor Poin Tertinggi (dengan Ikon Medali)
       const list = document.getElementById('leaderboardList');
       list.innerHTML = '';
       data.leaderboard.forEach((player, idx) => {
-        const isFirst = idx === 0 ? 'text-amber-400 font-bold text-lg' : 'text-slate-200';
+        let medalIcon = '';
+        let rankStyle = 'text-slate-200';
+        let borderStyle = 'border-slate-600/50 bg-slate-700/50';
+
+        if (idx === 0) {
+          medalIcon = '<span class="text-base sm:text-lg">🥇</span> ';
+          rankStyle = 'text-amber-300 font-extrabold';
+          borderStyle = 'border-amber-500/50 bg-amber-950/30';
+        } else if (idx === 1) {
+          medalIcon = '<span class="text-base sm:text-lg">🥈</span> ';
+          rankStyle = 'text-slate-200 font-bold';
+          borderStyle = 'border-slate-400/50 bg-slate-800/60';
+        } else if (idx === 2) {
+          medalIcon = '<span class="text-base sm:text-lg">🥉</span> ';
+          rankStyle = 'text-amber-600 font-bold';
+          borderStyle = 'border-amber-700/50 bg-slate-800/60';
+        } else {
+          medalIcon = `<span class="text-slate-400 font-semibold w-5 inline-block">${idx + 1}.</span> `;
+        }
+
         list.innerHTML += `
-          <li class="flex justify-between items-center bg-slate-700/50 p-3 rounded-lg border border-slate-600/50">
-            <span class="${isFirst}">${idx + 1}. ${player.name}</span>
-            <strong class="${isFirst} bg-slate-800 px-3 py-1 rounded-md">${player.score} p</strong>
+          <li class="flex justify-between items-center p-2 sm:p-2.5 rounded-lg border ${borderStyle} text-xs sm:text-sm transition-all">
+            <div class="flex items-center gap-1.5 overflow-hidden">
+              ${medalIcon}
+              <span class="${rankStyle} truncate">${player.name}</span>
+            </div>
+            <strong class="${rankStyle} bg-slate-900 px-2.5 py-1 rounded-md text-xs">${player.score} p</strong>
           </li>
         `;
       });
 
-      // Otomatis lanjut soal berikutnya setelah 5 detik
       setTimeout(() => {
         apiCall('start_question');
       }, 5000);

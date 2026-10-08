@@ -131,13 +131,20 @@ module.exports = async function(req, res) {
       }
 
       const leaderboard = Object.values(room.players).sort((a, b) => b.score - a.score).slice(0, 10);
+      
+      // Ambil 10 siswa tercepat & benar pada ronde ini
+      const fastestList = correctAnswers.slice(0, 10).map(c => ({
+        name: c.name,
+        time: (c.latency / 1000).toFixed(2) + 's'
+      }));
+
       await redis.set(`room:${roomId}`, room);
 
-      // Tampilkan hasil di layar proyektor
       await pusher.trigger(`room-${roomId}`, 'round_results', {
         correctAnswer: room.currentQuestion.correctAnswer,
         fastestName: fastest ? fastest.name : 'Tidak Ada',
         fastestTime: fastest ? (fastest.latency / 1000).toFixed(2) + 's' : '-',
+        fastestList,
         leaderboard
       });
       return res.status(200).json({ success: true });
