@@ -1,7 +1,7 @@
 {
   "rewrites": [
-    { "source": "/", "destination": "/public/host.html" },
-    { "source": "/host", "destination": "/public/host.html" },
-    { "source": "/play", "destination": "/public/play.html" }
+    { "source": "/", "destination": "/host.html" },
+    { "source": "/host", "destination": "/host.html" },
+    { "source": "/play", "destination": "/play.html" }
   ]
 }
