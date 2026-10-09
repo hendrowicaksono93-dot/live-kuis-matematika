@@ -186,7 +186,8 @@
 
     let isQuizActive = false;
     let currentLeaderboard = [];
-
+    let currentAllPlayers = [];
+    
     async function apiCall(action, payload = {}) {
       return fetch('/api', {
         method: 'POST',
@@ -318,6 +319,7 @@
 
     channel.bind('round_results', (data) => {
       currentLeaderboard = data.leaderboard;
+      currentAllPlayers = data.allPlayers || data.leaderboard;
 
       document.getElementById('fastestName').innerText = data.fastestName;
       document.getElementById('fastestTime').innerText = data.fastestTime;
@@ -344,6 +346,34 @@
         if(isQuizActive) apiCall('start_question');
       }, 5000);
     });
+
+    // FUNGSI EKSPOR DATA KE FILE EXCEL / CSV
+function downloadCSV() {
+      const dataToExport = currentAllPlayers.length > 0 ? currentAllPlayers : currentLeaderboard;
+
+      if (!dataToExport || dataToExport.length === 0) {
+        alert("Belum ada data nilai siswa untuk diunduh!");
+        return;
+      }
+
+      let csvContent = "data:text/csv;charset=utf-8,Peringkat,Nama Siswa,Total Skor (Poin)\n";
+
+      dataToExport.forEach((player, index) => {
+        const cleanName = player.name.replace(/"/g, '""');
+        csvContent += `${index + 1},"${cleanName}",${player.score}\n`;
+      });
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      const timeStamp = new Date().toISOString().slice(0, 10);
+      
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `Rekap_Lengkap_Kuis_Spenforty_${roomId}_${timeStamp}.csv`);
+      document.body.appendChild(link);
+      
+      link.click();
+      document.body.removeChild(link);
+    }
   </script>
 </body>
 </html>

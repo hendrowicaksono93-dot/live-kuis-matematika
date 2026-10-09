@@ -148,6 +148,7 @@ export default async function handler(req, res) {
           if (room.players[c.userId]) room.players[c.userId].score += 1;
         });
       }
+      const allPlayers = Object.values(room.players).sort((a, b) => b.score - a.score);
 
       const leaderboard = Object.values(room.players).sort((a, b) => b.score - a.score).slice(0, 10);
       
@@ -163,7 +164,8 @@ export default async function handler(req, res) {
         fastestName: fastest ? fastest.name : 'Tidak Ada',
         fastestTime: fastest ? (fastest.latency / 1000).toFixed(2) + 's' : '-',
         fastestList,
-        leaderboard
+        leaderboard,
+        allPlayers
       });
 
       return res.status(200).json({ success: true });
