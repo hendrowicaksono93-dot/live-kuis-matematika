@@ -171,9 +171,18 @@
       </div>
     </div>
 
-    <button onclick="location.reload()" class="mt-12 bg-white text-slate-900 px-10 py-3 rounded-full font-black text-lg hover:bg-slate-200 transition-all opacity-0 duration-1000" id="closePodiumBtn">
-      TUTUP & KEMBALI
-    </button>
+    <!-- WADAH TOMBOL (Akan dimunculkan bersamaan oleh animasi JS) -->
+    <div id="closePodiumBtn" class="mt-12 flex flex-wrap justify-center gap-4 opacity-0 transition-opacity duration-1000">
+      
+      <button onclick="downloadCSV()" class="bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-full font-black text-lg shadow-[0_0_15px_rgba(34,197,94,0.5)] transition-all active:scale-95">
+        📊 UNDUH REKAP CSV
+      </button>
+      
+      <button onclick="location.reload()" class="bg-white text-slate-900 px-8 py-3 rounded-full font-black text-lg hover:bg-slate-200 shadow-lg transition-all active:scale-95">
+        TUTUP & KEMBALI
+      </button>
+
+    </div>
   </div>
 
   <script>
