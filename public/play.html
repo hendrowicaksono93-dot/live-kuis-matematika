@@ -57,7 +57,7 @@
       <button onclick="pressNum('8')" class="bg-slate-700 active:bg-slate-600 py-4 text-2xl font-bold rounded-xl shadow-md">8</button>
       <button onclick="pressNum('9')" class="bg-slate-700 active:bg-slate-600 py-4 text-2xl font-bold rounded-xl shadow-md">9</button>
       
-      <button onclick="deleteNum()" class="bg-red-500 active:bg-red-600 py-4 text-2xl font-bold rounded-xl shadow-md">⌫</button>
+      <button onclick="pressMinus()" class="bg-slate-700 active:bg-slate-600 py-4 text-2xl font-bold rounded-xl shadow-md">-</button>
       <button onclick="pressNum('0')" class="bg-slate-700 active:bg-slate-600 py-4 text-2xl font-bold rounded-xl shadow-md">0</button>
       <button onclick="clearNum()" class="bg-amber-500 active:bg-amber-600 text-slate-900 py-4 text-2xl font-black rounded-xl shadow-md">C</button>
       
@@ -122,8 +122,18 @@
       }
     }
 
-    function deleteNum() {
-      currentAnswer = currentAnswer.slice(0, -1);
+    function pressMinus() {
+      // Jika sudah ada tanda minus, hilangkan (hapus minusnya)
+      if (currentAnswer.startsWith('-')) {
+        currentAnswer = currentAnswer.substring(1);
+      } 
+      // Jika belum ada tanda minus, tambahkan di depan
+      else {
+        // Batasi maksimal karakter agar tidak terlalu panjang jika ditambah minus
+        if (currentAnswer.length < 5 || currentAnswer === "") {
+          currentAnswer = '-' + currentAnswer;
+        }
+      }
       updateDisplay();
     }
 
